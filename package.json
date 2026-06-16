@@ -17,7 +17,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/shyim/pi-orcarouter"
+    "url": "git+https://github.com/shyim/pi-orcarouter.git"
   },
   "scripts": {
     "check": "biome check --write .",
