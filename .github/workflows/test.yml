@@ -1,0 +1,70 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      HAS_API_KEY: ${{ secrets.ORCAROUTER_API_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install deps
+        run: npm install
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Install pi
+        run: npm install -g @earendil-works/pi-coding-agent
+
+      - name: Basic smoke test
+        if: env.HAS_API_KEY == 'true'
+        env:
+          ORCAROUTER_API_KEY: ${{ secrets.ORCAROUTER_API_KEY }}
+        run: pi --extension ./index.ts --model "orcarouter/openai/gpt-4o-mini" --no-tools -p "Say hi in one word"
+
+      - name: Thinking off (no reasoning)
+        if: env.HAS_API_KEY == 'true'
+        env:
+          ORCAROUTER_API_KEY: ${{ secrets.ORCAROUTER_API_KEY }}
+        run: |
+          output=$(pi --no-extensions -e ./index.ts --thinking off --model "orcarouter/anthropic/claude-haiku-4.5" --no-tools --mode json -p 'hi' 2>&1) || { echo "FAIL: pi exited with $?"; exit 1; }
+          if echo "$output" | grep -qE '"type"\s*:\s*"thinking"'; then
+            echo "FAIL: thinking block found when off"
+            exit 1
+          fi
+          echo "PASS: no thinking block when off"
+
+      - name: Thinking low (reasoning enabled)
+        if: env.HAS_API_KEY == 'true'
+        env:
+          ORCAROUTER_API_KEY: ${{ secrets.ORCAROUTER_API_KEY }}
+        run: |
+          output=$(pi --no-extensions -e ./index.ts --thinking low --model "orcarouter/anthropic/claude-haiku-4.5" --no-tools --mode json -p 'hi' 2>&1) || { echo "FAIL: pi exited with $?"; exit 1; }
+          if ! echo "$output" | grep -qE '"type"\s*:\s*"thinking"'; then
+            echo "FAIL: no thinking block found when low"
+            exit 1
+          fi
+          echo "PASS: thinking block found when low"

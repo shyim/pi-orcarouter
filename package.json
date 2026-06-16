@@ -1,0 +1,44 @@
+{
+  "name": "pi-orcarouter",
+  "version": "0.1.0",
+  "type": "module",
+  "keywords": [
+    "pi-package"
+  ],
+  "files": [
+    "index.ts",
+    "models.ts",
+    "models.generated.ts",
+    "thinking-levels.ts",
+    "utils.ts",
+    "CHANGELOG.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shyim/pi-orcarouter"
+  },
+  "scripts": {
+    "check": "biome check --write .",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "test": "vitest run",
+    "generate-models": "tsx scripts/generate-models.ts && biome format --write models.generated.ts"
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "@sinclair/typebox": "*"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2",
+    "tsx": "^4.19.0",
+    "vitest": "^4.1.6"
+  }
+}
