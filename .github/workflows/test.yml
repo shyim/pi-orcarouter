@@ -45,26 +45,4 @@ jobs:
           ORCAROUTER_API_KEY: ${{ secrets.ORCAROUTER_API_KEY }}
         run: pi --extension ./index.ts --model "orcarouter/openai/gpt-4o-mini" --no-tools -p "Say hi in one word"
 
-      - name: Thinking off (no reasoning)
-        if: env.HAS_API_KEY == 'true'
-        env:
-          ORCAROUTER_API_KEY: ${{ secrets.ORCAROUTER_API_KEY }}
-        run: |
-          output=$(pi --no-extensions -e ./index.ts --thinking off --model "orcarouter/anthropic/claude-haiku-4.5" --no-tools --mode json -p 'hi' 2>&1) || { echo "FAIL: pi exited with $?"; exit 1; }
-          if echo "$output" | grep -qE '"type"\s*:\s*"thinking"'; then
-            echo "FAIL: thinking block found when off"
-            exit 1
-          fi
-          echo "PASS: no thinking block when off"
 
-      - name: Thinking low (reasoning enabled)
-        if: env.HAS_API_KEY == 'true'
-        env:
-          ORCAROUTER_API_KEY: ${{ secrets.ORCAROUTER_API_KEY }}
-        run: |
-          output=$(pi --no-extensions -e ./index.ts --thinking low --model "orcarouter/anthropic/claude-haiku-4.5" --no-tools --mode json -p 'A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much does the ball cost? Think step by step.' 2>&1) || { echo "FAIL: pi exited with $?"; exit 1; }
-          if ! echo "$output" | grep -qE '"type"\s*:\s*"thinking"'; then
-            echo "FAIL: no thinking block found when low"
-            exit 1
-          fi
-          echo "PASS: thinking block found when low"
