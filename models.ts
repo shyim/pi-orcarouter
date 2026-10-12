@@ -1,6 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { type ExtensionCommandContext, getAgentDir, type ProviderModelConfig } from "@earendil-works/pi-coding-agent";
+import {
+  type ExtensionCommandContext,
+  getAgentDir,
+  type ProviderModelConfig,
+  readStoredCredential,
+} from "@earendil-works/pi-coding-agent";
 import { resolve as resolveThinkingLevelMap } from "./thinking-levels.ts";
 import { fetchJsonWithTimeout } from "./utils.ts";
 
@@ -11,6 +16,33 @@ const CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 10000;
 
 export const ORCAROUTER_BASE = (process.env.ORCAROUTER_API_BASE || "https://api.orcarouter.ai").replace(/\/+$/, "");
+
+/**
+ * Resolve the OrcaRouter API key for catalog fetches, if available.
+ * Prefers `ORCAROUTER_API_KEY` env, then the `/login`-stored `auth.json`
+ * credential. Returns undefined when neither is configured — the
+ * `/v1/models` endpoint is public, so the key is optional and only
+ * attached when present (e.g. for higher rate limits or private models).
+ */
+export function resolveOrcaRouterApiKey(): string | undefined {
+  const envKey = process.env.ORCAROUTER_API_KEY?.trim();
+  if (envKey) return envKey;
+  try {
+    const cred = readStoredCredential("orcarouter");
+    if (cred?.type === "api_key" && typeof cred.key === "string") {
+      const key = cred.key.trim();
+      if (!key) return undefined;
+      // readStoredCredential returns the raw auth.json value without
+      // resolving `$ENV` templates or `!command` values (those are resolved
+      // at request time by pi). Only attach literal keys here.
+      if (key.startsWith("!") || key.includes("$")) return undefined;
+      return key;
+    }
+  } catch {
+    // Ignore auth.json read errors — catalog fetch works without a key.
+  }
+  return undefined;
+}
 
 // --- Raw API types ---
 /**
@@ -266,7 +298,7 @@ export function writeCache(models: Record<string, OrcaRouterModel>): void {
  */
 export async function fetchModelCatalog(timeoutMs = FETCH_TIMEOUT_MS): Promise<Record<string, OrcaRouterModel>> {
   const headers: Record<string, string> = {};
-  const apiKey = process.env.ORCAROUTER_API_KEY;
+  const apiKey = resolveOrcaRouterApiKey();
   if (apiKey) {
     headers.Authorization = `Bearer ${apiKey}`;
   }
